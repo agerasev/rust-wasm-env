@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use physsol::{vec::*, map::*};
+use vecmat::{vec::*, map::*};
 
 extern {
     fn js_canvas_size(ptr: *mut i32);

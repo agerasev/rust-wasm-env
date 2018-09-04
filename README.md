@@ -19,7 +19,7 @@ git init
 ```
 
 
-Add rust-wasm-env as a submodule to this project:
+Add `rust-wasm-env` as a submodule to this project:
 
 ```sh
 git submodule add https://github.com/nthend/rust-wasm-env.git wasm
@@ -82,7 +82,7 @@ To run your project you need a simple file server (requires [Python 3](https://w
 ```
 
 Now open your browser [http://localhost:8000/wasm/html](http://localhost:8000/wasm/html) and open browser console.
-You will see `Hello World!` message in it.
+You will see `Hello World!` message.
 
 
 ## License
