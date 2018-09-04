@@ -1,0 +1,7 @@
+[package]
+name = "wasm_env"
+version = "0.1.0"
+authors = ["Alexey Gerasev <alexey.gerasev@gmail.com>"]
+
+[dependencies]
+physsol = { git = "https://github.com/nthend/physsol-rs", rev = "a3828f215c9161a4b375b58ad3f77a05b8aa7816" }
