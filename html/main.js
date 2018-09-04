@@ -74,7 +74,7 @@ let resize = () => {
         wasm.exports.render();
     }
 
-    console.log("resize: " + width + " x " + height);
+    console.log("[info] resize: " + width + " x " + height);
 };
 
 window.addEventListener("load", () => {
@@ -90,12 +90,12 @@ window.addEventListener("load", () => {
         done = false;
         last = +new Date();
         window.requestAnimationFrame(render);
-        console.log("start");
+        console.log("[info] start animation");
         pause_button.innerText = "Pause";
     };
     let stop = () => {
         done = true;
-        console.log("stop");
+        console.log("[info] stop animation");
         pause_button.innerText = "Resume";
     };
     pause_button.addEventListener("click", () => {

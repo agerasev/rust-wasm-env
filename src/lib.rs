@@ -1,4 +1,4 @@
-pub extern crate physsol;
+pub extern crate vecmat;
 
 pub mod console;
 pub mod math;
