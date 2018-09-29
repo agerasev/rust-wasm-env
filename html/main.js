@@ -26,7 +26,11 @@ let env = {
         setTimeout(() => {
             wasm.exports.timeout(parseFloat(sec));
         }, 1000*sec);
-    }
+    },
+    js_crypto_random: (ptr, len) => {
+        let view = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
+        return window.crypto.getRandomValues(view);
+    },
 };
 
 let render = () => {
@@ -82,7 +86,7 @@ window.addEventListener("load", () => {
     resize();
     window.addEventListener("resize", resize);
 
-    import_env(env, math_env, "js_math_");
+    import_env(env, math_env, "");
     import_env(env, canvas_env, "js_canvas_");
 
     let pause_button = document.getElementById("pause");
@@ -106,8 +110,11 @@ window.addEventListener("load", () => {
         }
     });
 
+    console.log("load wasm");
+
     load_wasm("../../main.wasm", env, instance => {
         wasm = instance;
+        console.log("wasm init");
         wasm.exports.init();
         start();
     });

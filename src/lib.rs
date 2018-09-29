@@ -1,7 +1,6 @@
 pub extern crate vecmat;
 
 pub mod console;
-pub mod math;
 pub mod canvas;
 
 pub trait App {
@@ -13,6 +12,11 @@ pub trait App {
 extern {
     #[allow(dead_code)]
     fn js_timeout(sec: f64);
+    fn js_crypto_random(ptr: *mut u8, len: i32);
+}
+
+pub fn seed(slice: &mut [u8]) {
+    unsafe { js_crypto_random(slice.as_mut_ptr(), slice.len() as i32); }
 }
 
 #[macro_export]
