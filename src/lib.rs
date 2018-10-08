@@ -1,4 +1,6 @@
-pub extern crate vecmat;
+#[macro_use]
+extern crate lazy_static;
+extern crate vecmat;
 
 pub mod console;
 pub mod canvas;
@@ -6,7 +8,6 @@ pub mod canvas;
 pub trait App {
     fn step(&mut self, dt: f64);
     fn render(&mut self);
-    fn timeout(&mut self, dt: f64);
 }
 
 extern {
@@ -26,11 +27,6 @@ pub fn handle(app: &mut App, code: u32) {
     } else if code == 0x0102 {
         let mut data = [0 as u8; 8];
         unsafe { js_get_event_data(data.as_mut_ptr(), data.len() as i32); }
-        for i in 0..data.len()/2 {
-            let tmp = data[i];
-            data[i] = data[data.len() - i - 1];
-            data[data.len() - i - 1] = tmp;
-        }
         let dt = unsafe { *(data.as_ptr() as *const f64) };
         app.step(dt);
     } else if code == 0x0103 {
@@ -40,36 +36,39 @@ pub fn handle(app: &mut App, code: u32) {
     }
 }
 
+lazy_static! {
+    static ref APP: std::sync::Mutex<Option<Box<App + Send>>> = std::sync::Mutex::new(None);
+}
+
+#[no_mangle]
+pub extern fn init() {
+    console::setup();
+    let mut guard = APP.lock().unwrap();
+    match *guard {
+        None => { *guard = Some($App::new()); },
+        Some(_) => { console::error("App is already initialized!"); },
+    }
+}
+
+#[no_mangle]
+pub extern fn handle(code: u32) {
+    let mut guard = APP.lock().unwrap();
+    let app = guard.as_mut().unwrap();
+    handle(app as &mut App, code);
+}
+
+#[no_mangle]
+pub extern fn quit() {
+    let mut guard = APP.lock().unwrap();
+    match *guard {
+        None => { console::error("App is already None!"); },
+        Some(_) => { *guard = None; },
+    }
+}
+
 #[macro_export]
 macro_rules! bind_wasm {
-    ($App:ident, $wasm:ident) => (
-        lazy_static! {
-            static ref APP: std::sync::Mutex<Option<$App>> = std::sync::Mutex::new(None);
-        }
-        #[no_mangle]
-        pub extern fn init() {
-            $wasm::console::setup();
-            let mut guard = APP.lock().unwrap();
-            match *guard {
-                None => { *guard = Some($App::new()); },
-                Some(_) => { $wasm::console::error("App is already initialized!"); },
-            }
-        }
+    ($App:expr) => (
         
-        #[no_mangle]
-        pub extern fn handle(code: u32) {
-            let mut guard = APP.lock().unwrap();
-            let app = guard.as_mut().unwrap();
-            $wasm::handle(app as &mut $wasm::App, code);
-        }
-
-        #[no_mangle]
-        pub extern fn quit() {
-            let mut guard = APP.lock().unwrap();
-            match *guard {
-                None => { $wasm::console::error("App is already None!"); },
-                Some(_) => { *guard = None; },
-            }
-        }
     )
 }

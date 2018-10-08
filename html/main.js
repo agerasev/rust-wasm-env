@@ -12,7 +12,7 @@ let handlers = {
     },
     "step": (dt) => {
         let view = new DataView(event_data);
-        view.setFloat64(0, dt);
+        view.setFloat64(0, dt, true);
         wasm.exports.handle(0x0102);
     },
     "render": () => {
