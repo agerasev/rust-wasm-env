@@ -5,4 +5,4 @@ authors = ["Alexey Gerasev <alexey.gerasev@gmail.com>"]
 
 [dependencies]
 lazy_static = "1.1.0"
-vecmat = { git = "https://github.com/nthend/vecmat-rs", rev = "f7c4b4374d54d20784d320fca88c9b07a52d0774" }
+vecmat = "0.3"

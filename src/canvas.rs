@@ -29,7 +29,7 @@ extern {
     fn js_canvas_rect(x:f64,y:f64,w:f64,h:f64);
 }
 
-pub type Color = Vec4f64;
+pub type Color = Vec4<f64>;
 
 pub struct Canvas {
     map: Affine2<f64>,
@@ -49,34 +49,34 @@ pub enum Method {
 #[derive(Debug, Clone)]
 pub enum Path {
     Arc {
-        pos: Vec2f64,
+        pos: Vec2<f64>,
         rad: f64,
-        angle: Vec2f64,
+        angle: Vec2<f64>,
     },
     Circle {
-        pos: Vec2f64,
+        pos: Vec2<f64>,
         rad: f64,
     },
-    MoveTo { pos: Vec2f64 },
-    LineTo { pos: Vec2f64 },
+    MoveTo { pos: Vec2<f64> },
+    LineTo { pos: Vec2<f64> },
     BezierTo {
-        cp1: Vec2f64,
-        cp2: Vec2f64,
-        pos: Vec2f64,
+        cp1: Vec2<f64>,
+        cp2: Vec2<f64>,
+        pos: Vec2<f64>,
     },
     QuadraticTo {
-        cp1: Vec2f64,
-        pos: Vec2f64,
+        cp1: Vec2<f64>,
+        pos: Vec2<f64>,
     },
     Ellipse {
-        pos: Vec2f64,
-        rad: Vec2f64,
+        pos: Vec2<f64>,
+        rad: Vec2<f64>,
         rot: f64,
-        angle: Vec2f64,
+        angle: Vec2<f64>,
     },
     Rect {
-        pos: Vec2f64,
-        size: Vec2f64,
+        pos: Vec2<f64>,
+        size: Vec2<f64>,
     },
     Close,
     List {
@@ -89,10 +89,10 @@ impl Canvas {
         Canvas { map: Affine2::new() }
     }
 
-    pub fn size(&self) -> Vec2i32 {
-        let mut buf: [i32;2] = [0, 0];
+    pub fn size(&self) -> Vec2<i32> {
+        let mut buf: [i32; 2] = [0, 0];
         unsafe { js_canvas_size(buf.as_mut_ptr()); }
-        Vec2i32::from_arr([buf[0], buf[1]])
+        Vec2::from(buf[0], buf[1])
     }
 
     pub fn transform(&mut self, map: Affine2<f64>) {
