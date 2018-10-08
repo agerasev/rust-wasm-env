@@ -13,10 +13,31 @@ extern {
     #[allow(dead_code)]
     fn js_timeout(sec: f64);
     fn js_crypto_random(ptr: *mut u8, len: i32);
+    fn js_get_event_data(ptr: *mut u8, len: i32);
 }
 
 pub fn seed(slice: &mut [u8]) {
     unsafe { js_crypto_random(slice.as_mut_ptr(), slice.len() as i32); }
+}
+
+pub fn handle(app: &mut App, code: u32) {
+    if code == 0x0101 {
+        console::log(&format!("timeout"));
+    } else if code == 0x0102 {
+        let mut data = [0 as u8; 8];
+        unsafe { js_get_event_data(data.as_mut_ptr(), data.len() as i32); }
+        for i in 0..data.len()/2 {
+            let tmp = data[i];
+            data[i] = data[data.len() - i - 1];
+            data[data.len() - i - 1] = tmp;
+        }
+        let dt = unsafe { *(data.as_ptr() as *const f64) };
+        app.step(dt);
+    } else if code == 0x0103 {
+        app.render();
+    } else {
+        console::error(&format!("unknown event code: {}", code));
+    }
 }
 
 #[macro_export]
@@ -36,22 +57,10 @@ macro_rules! bind_wasm {
         }
         
         #[no_mangle]
-        pub extern fn timeout(dt: f64) {
-            $wasm::console::log(&format!("timeout: {} sec", dt));
-        }
-
-        #[no_mangle]
-        pub extern fn step(dt: f64) {
+        pub extern fn handle(code: u32) {
             let mut guard = APP.lock().unwrap();
             let app = guard.as_mut().unwrap();
-            (app as &mut $wasm::App).step(dt);
-        }
-
-        #[no_mangle]
-        pub extern fn render() {
-            let mut guard = APP.lock().unwrap();
-            let app = guard.as_mut().unwrap();
-            (app as &mut $wasm::App).render();
+            $wasm::handle(app as &mut $wasm::App, code);
         }
 
         #[no_mangle]

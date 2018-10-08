@@ -2,6 +2,24 @@ let wasm = null;
 let last = null;
 let done = true;
 
+let event_data = new ArrayBuffer(0x100);
+
+let handlers = {
+    "timeout": (dt) => {
+        let view = new DataView(event_data);
+        view.setFloat64(0, dt);
+        wasm.exports.handle(0x0101);
+    },
+    "step": (dt) => {
+        let view = new DataView(event_data);
+        view.setFloat64(0, dt);
+        wasm.exports.handle(0x0102);
+    },
+    "render": () => {
+        wasm.exports.handle(0x0103);
+    },
+}
+
 let load_str = (ptr, len) => {
     const view = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
     //const utf8dec = new TextDecoder("utf-8");
@@ -24,13 +42,20 @@ let env = {
     },
     js_timeout: (sec) => {
         setTimeout(() => {
-            wasm.exports.timeout(parseFloat(sec));
+            handlers["timeout"](parseFloat(sec));
         }, 1000*sec);
     },
     js_crypto_random: (ptr, len) => {
         let view = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
         return window.crypto.getRandomValues(view);
     },
+    js_get_event_data: (ptr, len) => {
+        let dst = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
+        let src = new Uint8Array(event_data);
+        for (let i = 0; i < len; i++) {
+            dst[i] = src[i];
+        }
+    }
 };
 
 let render = () => {
@@ -38,8 +63,8 @@ let render = () => {
         let now = +new Date();
         let ms = now - last;
         last = now;
-        wasm.exports.step(parseFloat(0.001*ms));
-        wasm.exports.render();
+        handlers["step"](parseFloat(0.001*ms));
+        handlers["render"]();
         window.requestAnimationFrame(render);
     }
 };
@@ -75,7 +100,7 @@ let resize = () => {
 
     canvas_resize(width, height);
     if (wasm && done) {
-        wasm.exports.render();
+        handlers["render"]();
     }
 
     console.log("[info] resize: " + width + " x " + height);
