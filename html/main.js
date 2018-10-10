@@ -2,22 +2,16 @@ let wasm = null;
 let last = null;
 let done = true;
 
-let event_data = new ArrayBuffer(0x100);
+let event_data = null;
 
-let handlers = {
-    "timeout": (dt) => {
-        let view = new DataView(event_data);
-        view.setFloat64(0, dt);
-        wasm.exports.handle(0x0101);
-    },
-    "step": (dt) => {
-        let view = new DataView(event_data);
-        view.setFloat64(0, dt, true);
-        wasm.exports.handle(0x0102);
-    },
-    "render": () => {
-        wasm.exports.handle(0x0103);
-    },
+let handle = (event) => {
+    let pos = 0;
+    for (let i = 0; i < event.args.length; ++i) {
+        let type = TYPE[event.args[i].type];
+        type.write(event_data, pos, event.args[i].value);
+        pos += type.size;
+    }
+    wasm.exports.handle(event.code);
 }
 
 let load_str = (ptr, len) => {
@@ -42,20 +36,13 @@ let env = {
     },
     js_timeout: (sec) => {
         setTimeout(() => {
-            handlers["timeout"](parseFloat(sec));
+            handle(EVENT["Timeout"](parseFloat(sec)));
         }, 1000*sec);
     },
     js_crypto_random: (ptr, len) => {
         let view = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
         return window.crypto.getRandomValues(view);
     },
-    js_get_event_data: (ptr, len) => {
-        let dst = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
-        let src = new Uint8Array(event_data);
-        for (let i = 0; i < len; i++) {
-            dst[i] = src[i];
-        }
-    }
 };
 
 let render = () => {
@@ -63,8 +50,8 @@ let render = () => {
         let now = +new Date();
         let ms = now - last;
         last = now;
-        handlers["step"](parseFloat(0.001*ms));
-        handlers["render"]();
+        handle(EVENT["Step"](parseFloat(0.001*ms)));
+        handle(EVENT["Render"]());
         window.requestAnimationFrame(render);
     }
 };
@@ -100,7 +87,7 @@ let resize = () => {
 
     canvas_resize(width, height);
     if (wasm && done) {
-        handlers["render"]();
+        handle(EVENT["Render"]());
     }
 
     console.log("[info] resize: " + width + " x " + height);
@@ -140,7 +127,8 @@ window.addEventListener("load", () => {
     load_wasm("../../main.wasm", env, instance => {
         wasm = instance;
         console.log("wasm init");
-        wasm.exports.init();
+        let event_data_ptr = wasm.exports.init();
+        event_data = new DataView(wasm.exports.memory.buffer, event_data_ptr, EVENT_DATA_SIZE);
         start();
     });
 
