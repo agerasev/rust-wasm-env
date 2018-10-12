@@ -18,26 +18,28 @@ pub trait App {
 extern {
     #[allow(dead_code)]
     fn js_timeout(sec: f64);
-    fn js_crypto_random(ptr: *mut u8, len: i32);
+    fn js_crypto_random(ptr: *mut u8, len: usize);
+    fn js_load_mod(id: u32, path_ptr: *mut u8, path_len: usize);
+    fn js_call_mod(mod_ptr: *mut u8, mod_len: usize, func_ptr: *mut u8, func_len: usize);
 }
 
 pub fn seed(slice: &mut [u8]) {
-    unsafe { js_crypto_random(slice.as_mut_ptr(), slice.len() as i32); }
+    unsafe { js_crypto_random(slice.as_mut_ptr(), slice.len()); }
 }
 
 lazy_static! {
-    static ref EVENT_DATA: Mutex<Vec<u8>> = Mutex::new(vec!(0; interop::EVENT_DATA_SIZE));
-}
-
-pub fn _event_data_ptr() -> *mut u8 {
-    EVENT_DATA.lock().unwrap().as_mut_ptr()
+    static ref BUFFER: Mutex<Vec<u8>> = Mutex::new(vec!(0; interop::BUFFER_SIZE));
 }
 
 pub fn _handle(app: &mut Box<App+Send>, code: u32) {
-    let mut guard = EVENT_DATA.lock().unwrap();
+    let mut guard = BUFFER.lock().unwrap();
     let data = guard.as_mut();
     let event = Event::from(code, data).unwrap();
     app.handle(event);
+}
+
+pub fn _buffer_ptr() -> *mut u8 {
+    BUFFER.lock().unwrap().as_mut_ptr()
 }
 
 #[macro_export]
@@ -55,7 +57,7 @@ macro_rules! wasm_bind {
                 None => { *guard = Some($appfn()); },
                 Some(_) => { $wasm::console::error("App is already initialized!"); },
             }
-            $wasm::_event_data_ptr()
+            $wasm::_buffer_ptr()
         }
 
         #[no_mangle]

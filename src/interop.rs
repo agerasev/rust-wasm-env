@@ -1,6 +1,6 @@
 use byteorder::{LE, ReadBytesExt};
 
-pub static EVENT_DATA_SIZE: usize = 0x1000;
+pub static BUFFER_SIZE: usize = 0x1000;
 
 pub enum Event {
     Timeout { dt: f64 },

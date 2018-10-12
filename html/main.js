@@ -1,21 +1,13 @@
-let wasm = null;
-let last = null;
-let done = true;
+let MODULES = {};
 
-let event_data = null;
+let WASM = null;
+let LAST = null;
+let DONE = true;
 
-let handle = (event) => {
-    let pos = 0;
-    for (let i = 0; i < event.args.length; ++i) {
-        let type = TYPE[event.args[i].type];
-        type.write(event_data, pos, event.args[i].value);
-        pos += type.size;
-    }
-    wasm.exports.handle(event.code);
-}
+let BUFFER = null;
 
 let load_str = (ptr, len) => {
-    const view = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
+    const view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
     //const utf8dec = new TextDecoder("utf-8");
     //return utf8dec.decode(view);
     let str = "";
@@ -23,6 +15,28 @@ let load_str = (ptr, len) => {
         str += String.fromCharCode(view[i]);
     }
     return str;
+}
+
+let handle = (event) => {
+    console.log("handle");
+    let pos = 0;
+    for (let i = 0; i < event.args.length; ++i) {
+        let type = TYPE[event.args[i].type];
+        type.write(BUFFER, pos, event.args[i].value);
+        pos += type.size;
+    }
+    WASM.exports.handle(event.code);
+}
+
+let call_func = (func, view) => {
+    let pos = 0;
+    let args = [];
+    for (let i = 0; i < func.args.length; ++i) {
+        let type = TYPE[event.args[i]];
+        args.push(type.read(view, pos, event.args[i].value));
+        pos += type.size;
+    }
+    func.func.apply(null, args);
 }
 
 let env = {
@@ -34,24 +48,38 @@ let env = {
             console.log(str);
         }
     },
+    js_crypto_random: (ptr, len) => {
+        let view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
+        return window.crypto.getRandomValues(view);
+    },
     js_timeout: (sec) => {
         setTimeout(() => {
-            handle(EVENT["Timeout"](parseFloat(sec)));
+            handle(new Event.Timeout(parseFloat(sec)));
         }, 1000*sec);
     },
-    js_crypto_random: (ptr, len) => {
-        let view = new Uint8Array(wasm.exports.memory.buffer, ptr, len);
-        return window.crypto.getRandomValues(view);
+    js_mod_load: (id, path_ptr, path_len) => {
+        let path = load_str(path_ptr, path_len);
+        let script = document.createElement("script");
+        script.addEventListener("load", () => {
+            handle(new Event.Loaded(id));
+        });
+        script.src = path;
+        document.head.appendChild(script);
+    },
+    js_mod_call: (mod_ptr, mod_len, func_ptr, func_len) => {
+        let mod = load_str(mod_ptr, mod_len);
+        let func = load_str(func_ptr, func_len);
+        call_func(MODULES[mod].exports[func], BUFFER);
     },
 };
 
 let render = () => {
-    if (!done) {
+    if (!DONE) {
         let now = +new Date();
-        let ms = now - last;
-        last = now;
-        handle(EVENT["Step"](parseFloat(0.001*ms)));
-        handle(EVENT["Render"]());
+        let ms = now - LAST;
+        LAST = now;
+        handle(new Event.Step(parseFloat(0.001*ms)));
+        handle(new Event.Render());
         window.requestAnimationFrame(render);
     }
 };
@@ -75,60 +103,40 @@ let load_wasm = (path, env, onload) => {
     });
 };
 
-let resize = () => {
-    let width = 
-        window.innerWidth || 
-        document.documentElement.clientWidth || 
-        document.body.clientWidth;
-    let height = 
-        window.innerHeight ||
-        document.documentElement.clientHeight ||
-        document.body.clientHeight;
-
-    canvas_resize(width, height);
-    if (wasm && done) {
-        handle(EVENT["Render"]());
-    }
-
-    console.log("[info] resize: " + width + " x " + height);
-};
-
 window.addEventListener("load", () => {
     canvas_init();
-    resize();
-    window.addEventListener("resize", resize);
 
     import_env(env, math_env, "");
     import_env(env, canvas_env, "js_canvas_");
 
     let pause_button = document.getElementById("pause");
     let start = () => {
-        done = false;
-        last = +new Date();
+        DONE = false;
+        LAST = +new Date();
         window.requestAnimationFrame(render);
         console.log("[info] start animation");
         pause_button.innerText = "Pause";
     };
     let stop = () => {
-        done = true;
+        DONE = true;
         console.log("[info] stop animation");
         pause_button.innerText = "Resume";
     };
     pause_button.addEventListener("click", () => {
-        if (done) {
+        if (DONE) {
             start();
         } else {
             stop();
         }
     });
 
-    console.log("load wasm");
+    console.log("load WASM");
 
-    load_wasm("../../main.wasm", env, instance => {
-        wasm = instance;
-        console.log("wasm init");
-        let event_data_ptr = wasm.exports.init();
-        event_data = new DataView(wasm.exports.memory.buffer, event_data_ptr, EVENT_DATA_SIZE);
+    load_wasm("./main.wasm", env, instance => {
+        WASM = instance;
+        console.log("WASM init");
+        let buffer_ptr = WASM.exports.init();
+        BUFFER = new DataView(WASM.exports.memory.buffer, buffer_ptr, BUFFER_SIZE);
         start();
     });
 

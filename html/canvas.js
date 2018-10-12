@@ -6,16 +6,33 @@ let context = null;
 let canvas_init = () => {
     canvas = document.getElementById("screen");
     context = canvas.getContext("2d");
+
+    canvas_resize();
+    window.addEventListener("resize", canvas_resize);
 };
 
 let canvas_resize = (w, h) => {
     canvas.width = w;
     canvas.height = h;
+
+    let width = 
+        window.innerWidth || 
+        document.documentElement.clientWidth || 
+        document.body.clientWidth;
+    let height = 
+        window.innerHeight ||
+        document.documentElement.clientHeight ||
+        document.body.clientHeight;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    console.log("[info] resize: " + width + " x " + height);
 };
 
 let canvas_env = {
     size: (ptr) => {
-        let view = new Uint32Array(wasm.exports.memory.buffer, ptr, 2);
+        let view = new Uint32Array(WASM.exports.memory.buffer, ptr, 2);
         view[0] = canvas.width;
         view[1] = canvas.height;
     },
