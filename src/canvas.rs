@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use std::sync::Once;
 
 use vecmat::{vec::*, map::*};
 
@@ -28,6 +29,8 @@ extern {
     fn js_canvas_ellipse(x:f64,y:f64,rx:f64,ry:f64,rot:f64,sa:f64,ea:f64);
     fn js_canvas_rect(x:f64,y:f64,w:f64,h:f64);
 }
+
+static MOD_CHECK: Once = Once::new();
 
 pub type Color = Vec4<f64>;
 
@@ -86,6 +89,14 @@ pub enum Path {
 
 impl Canvas {
     pub fn new() -> Self {
+        MOD_CHECK.call_once(|| {
+            let mod_name = "canvas";
+            unsafe {
+                if ::js_mod_check(mod_name.as_ptr(), mod_name.len()) != 1 {
+                    panic!("js module 'canvas' is not loaded");
+                }
+            }
+        });
         Canvas { map: Affine2::new() }
     }
 

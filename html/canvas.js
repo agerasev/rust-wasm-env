@@ -1,98 +1,158 @@
-let mkcol = (r,g,b,a) => "rgba(" + 255*r + "," + 255*g + "," + 255*b + "," + a + ")"
+class CanvasModule {
+    constructor() {
+        let mkcol = (r,g,b,a) => "rgba(" + 255*r + "," + 255*g + "," + 255*b + "," + a + ")"
 
-let canvas = null;
-let context = null;
+        this.canvas = null;
+        this.context = null;
 
-let canvas_init = () => {
-    canvas = document.getElementById("screen");
-    context = canvas.getContext("2d");
+        this.resize = () => {
+            let width = 
+                window.innerWidth || 
+                document.documentElement.clientWidth || 
+                document.body.clientWidth;
+            let height = 
+                window.innerHeight ||
+                document.documentElement.clientHeight ||
+                document.body.clientHeight;
 
-    canvas_resize();
-    window.addEventListener("resize", canvas_resize);
+            this.canvas.width = width;
+            this.canvas.height = height;
+
+            console.log("[info] resize: " + width + " x " + height);
+        };
+
+        this.init = () => {
+            this.canvas = document.getElementById("screen");
+            this.context = this.canvas.getContext("2d");
+
+            this.resize();
+            window.addEventListener("resize", this.resize);
+        };
+
+        this.exports = {
+            "size": {
+                "func": (ptr) => {
+                    let view = new Uint32Array(WASM.exports.memory.buffer, ptr, 2);
+                    view[0] = this.canvas.width;
+                    view[1] = this.canvas.height;
+                },
+                "args": ["usize"],
+            },
+
+            "set_transform": {
+                "func": (m00, m01, m10, m11, x, y) => {
+                    this.context.setTransform(m00, m01, m10, m11, x, y);
+                },
+                "args": ["f64","f64","f64","f64","f64","f64"],
+            },
+
+            "fill_style": {
+                "func": (r,g,b,a) => {
+                    this.context.fillStyle = mkcol(r,g,b,a);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+            "stroke_style": {
+                "func": (r,g,b,a) => {
+                    this.context.strokeStyle = mkcol(r,g,b,a);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+            "line_width": {
+                "func": (w) => {
+                    this.context.lineWidth = w;
+                },
+                "args": ["f64"],
+            },
+
+            "clear_rect": {
+                "func": (x,y,w,h) => {
+                    this.context.clearRect(x,y,w,h);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+            "fill_rect": {
+                "func": (x,y,w,h) => {
+                    this.context.fillRect(x,y,w,h);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+            "stroke_rect": {
+                "func": (x,y,w,h) => {
+                    this.context.strokeRect(x,y,w,h);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+
+            "begin_path": {
+                "func": () => {
+                    this.context.beginPath();
+                },
+                "args": [],
+            },
+            "close_path": {
+                "func": () => {
+                    this.context.closePath();
+                },
+                "args": [],
+            },
+            "fill": {
+                "func": () => {
+                    this.context.fill();
+                },
+                "args": [],
+            },
+            "stroke": {
+                "func": () => {
+                    this.context.stroke();
+                },
+                "args": [],
+            },
+            
+            "arc": {
+                "func": (x,y,r,sa,ea) => {
+                    this.context.arc(x,y,r,sa,ea);
+                },
+                "args": ["f64","f64","f64","f64","f64"],
+            },
+            "move_to": {
+                "func": (x,y) => {
+                    this.context.moveTo(x,y);
+                },
+                "args": ["f64","f64"],
+            },
+            "line_to": {
+                "func": (x,y) => {
+                    this.context.lineTo(x,y);
+                },
+                "args": ["f64","f64"],
+            },
+            "bezier_curve_to": {
+                "func": (x1,y1,x2,y2,x,y) => {
+                    this.context.bezierCurveTo(x1,y1,x2,y2,x,y);
+                },
+                "args": ["f64","f64","f64","f64","f64","f64"],
+            },
+            "quadratic_curve_to": {
+                "func": (x1,y1,x,y) => {
+                    this.context.quadraticCurveTo(x1,y1,x,y);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+            "ellipse": {
+                "func": (x,y,rx,ry,rot,sa,ea) => {
+                    this.context.ellipse(x,y,rx,ry,rot,sa,ea,0);
+                },
+                "args": ["f64","f64","f64","f64","f64","f64","f64"],
+            },
+            "rect": {
+                "func": (x,y,w,h) => {
+                    this.context.rect(x,y,w,h);
+                },
+                "args": ["f64","f64","f64","f64"],
+            },
+        }
+    }
 };
 
-let canvas_resize = (w, h) => {
-    canvas.width = w;
-    canvas.height = h;
-
-    let width = 
-        window.innerWidth || 
-        document.documentElement.clientWidth || 
-        document.body.clientWidth;
-    let height = 
-        window.innerHeight ||
-        document.documentElement.clientHeight ||
-        document.body.clientHeight;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    console.log("[info] resize: " + width + " x " + height);
-};
-
-let canvas_env = {
-    size: (ptr) => {
-        let view = new Uint32Array(WASM.exports.memory.buffer, ptr, 2);
-        view[0] = canvas.width;
-        view[1] = canvas.height;
-    },
-
-    set_transform: (m00, m01, m10, m11, x, y) => {
-        context.setTransform(m00, m01, m10, m11, x, y);
-    },
-
-    fill_style: (r,g,b,a) => {
-        context.fillStyle = mkcol(r,g,b,a);
-    },
-    stroke_style: (r,g,b,a) => {
-        context.strokeStyle = mkcol(r,g,b,a);
-    },
-    line_width: (w) => {
-        context.lineWidth = w;
-    },
-
-    clear_rect: (x,y,w,h) => {
-        context.clearRect(x,y,w,h);
-    },
-    fill_rect: (x,y,w,h) => {
-        context.fillRect(x,y,w,h);
-    },
-    stroke_rect: (x,y,w,h) => {
-        context.strokeRect(x,y,w,h);
-    },
-
-    begin_path: () => {
-        context.beginPath();
-    },
-    close_path: () => {
-        context.closePath();
-    },
-    fill: () => {
-        context.fill();
-    },
-    stroke: () => {
-        context.stroke();
-    },
-    
-    arc: (x,y,r,sa,ea) => {
-        context.arc(x,y,r,sa,ea);
-    },
-    move_to: (x,y) => {
-        context.moveTo(x,y);
-    },
-    line_to: (x,y) => {
-        context.lineTo(x,y);
-    },
-    bezier_curve_to: (x1,y1,x2,y2,x,y) => {
-        context.bezierCurveTo(x1,y1,x2,y2,x,y);
-    },
-    quadratic_curve_to: (x1,y1,x,y) => {
-        context.quadraticCurveTo(x1,y1,x,y);
-    },
-    ellipse: (x,y,rx,ry,rot,sa,ea) => {
-        context.ellipse(x,y,rx,ry,rot,sa,ea,0);
-    },
-    rect: (x,y,w,h) => {
-        context.rect(x,y,w,h);
-    },
-};
+MODULES["canvas"] = new CanvasModule();

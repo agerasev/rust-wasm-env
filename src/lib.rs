@@ -19,8 +19,11 @@ extern {
     #[allow(dead_code)]
     fn js_timeout(sec: f64);
     fn js_crypto_random(ptr: *mut u8, len: usize);
-    fn js_load_mod(id: u32, path_ptr: *mut u8, path_len: usize);
-    fn js_call_mod(mod_ptr: *mut u8, mod_len: usize, func_ptr: *mut u8, func_len: usize);
+    #[allow(dead_code)]
+    fn js_mod_load(id: u32, path_ptr: *const u8, path_len: usize);
+    #[allow(dead_code)]
+    fn js_mod_call(mod_ptr: *const u8, mod_len: usize, func_ptr: *const u8, func_len: usize);
+    fn js_mod_check(mod_ptr: *const u8, mod_len: usize) -> i32;
 }
 
 pub fn seed(slice: &mut [u8]) {

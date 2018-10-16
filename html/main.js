@@ -1,11 +1,3 @@
-let MODULES = {};
-
-let WASM = null;
-let LAST = null;
-let DONE = true;
-
-let BUFFER = null;
-
 let load_str = (ptr, len) => {
     const view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
     //const utf8dec = new TextDecoder("utf-8");
@@ -18,7 +10,6 @@ let load_str = (ptr, len) => {
 }
 
 let handle = (event) => {
-    console.log("handle");
     let pos = 0;
     for (let i = 0; i < event.args.length; ++i) {
         let type = TYPE[event.args[i].type];
@@ -71,6 +62,14 @@ let env = {
         let func = load_str(func_ptr, func_len);
         call_func(MODULES[mod].exports[func], BUFFER);
     },
+    js_mod_check: (mod_ptr, mod_len) => {
+        let mod = load_str(mod_ptr, mod_len);
+        console.log("abc");
+        if (MODULES[mod]) {
+            return 1;
+        }
+        return 0;
+    }
 };
 
 let render = () => {
@@ -98,16 +97,22 @@ let load_wasm = (path, env, onload) => {
     fetch(path + "?_=" + Math.floor(Math.random()*0x80000000))
     .then(response => response.arrayBuffer())
     .then(bytes => WebAssembly.instantiate(bytes, {env: env}))
-    .then(results => {
-        onload(results.instance);
-    });
+    .then(results => onload(results.instance), results => console.error(results));
 };
 
 window.addEventListener("load", () => {
-    canvas_init();
 
     import_env(env, math_env, "");
-    import_env(env, canvas_env, "js_canvas_");
+
+    Object.keys(MODULES).forEach((key) => {
+        let mod = MODULES[key];
+        mod.init();
+        let mod_env = {};
+        Object.keys(mod.exports).forEach((fn) => {
+            mod_env[fn] = mod.exports[fn].func;
+        });
+        import_env(env, mod_env, "js_" + key + "_");
+    });
 
     let pause_button = document.getElementById("pause");
     let start = () => {
@@ -130,12 +135,13 @@ window.addEventListener("load", () => {
         }
     });
 
-    console.log("load WASM");
+    console.log("load wasm");
 
     load_wasm("./main.wasm", env, instance => {
         WASM = instance;
-        console.log("WASM init");
+        console.log("wasm init");
         let buffer_ptr = WASM.exports.init();
+        console.log("buffer init");
         BUFFER = new DataView(WASM.exports.memory.buffer, buffer_ptr, BUFFER_SIZE);
         start();
     });
