@@ -1,6 +1,10 @@
 # WASM Env
 
-Simple environment for running WASM
+Simple environment for running Rust WASM applications in Web-browser
+
+## Sample applications
+
++ [Gravity game](https://github.com/nthend/rust-wasm-gravity.git) ([try it!](https://nthend.github.io/rust-wasm-gravity))
 
 ## Documentation
 
@@ -50,39 +54,39 @@ extern crate wasm_env as wasm;
 struct App {}
 
 impl App {
-    pub fn new() -> Self {
-        wasm::console::log("Hello World!");
-        App {}
-    }
+	fn new() -> Self {
+		wasm::console::log("Hello, WASM!");
+		App {}
+	}
 }
 
 impl wasm::App for App {
-    fn timeout(&mut self, _dt: f64) {}
-    fn step(&mut self, _dt: f64) {}
-    fn render(&mut self) {}
+    fn handle(&mut self, event: wasm::Event) {
+        wasm::console::log(&format!("{:?}", event));
+    }
 }
 
-bind_wasm!(App, wasm);
+wasm_bind!(wasm, || Box::new(App::new()));
 ```
 
+To run following scripts you need to have [Python 3](https://www.python.org/download/releases/3.0/)) installed.
 
-To build your project run the following script:
+To build your project:
 
 ```sh
-./wasm/script/build_wasm.sh
+python3 wasm/script/build.py
 ```
 
-Each `.sh` script has respectively named `.bat` script for running in Windows environment.
-
-
-To run your project you need a simple file server (requires [Python 3](https://www.python.org/download/releases/3.0/)):
+To run your project you need a simple file server:
 
 ```sh
-./wasm/script/run_server.sh
+python3 wasm/script/server.py
 ```
 
-Now open your browser [http://localhost:8000/wasm/html](http://localhost:8000/wasm/html) and open browser console.
-You will see `Hello World!` message.
+
+
+Now open your browser [http://localhost:8000](http://localhost:8000) and open browser console.
+You will see `Hello World!` message and a lot of event messages.
 
 
 ## License

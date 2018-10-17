@@ -2,6 +2,7 @@ use byteorder::{LE, ReadBytesExt};
 
 pub static BUFFER_SIZE: usize = 0x1000;
 
+#[derive(Debug)]
 pub enum Event {
     Timeout { dt: f64 },
     Step { dt: f64 },
