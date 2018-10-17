@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["_buffer_ptr",""],["_handle",""],["seed",""]],"macro":[["wasm_bind",""]],"mod":[["canvas",""],["console",""],["interop",""]],"trait":[["App",""]]});
