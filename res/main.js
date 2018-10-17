@@ -1,33 +1,6 @@
-let load_str = (ptr, len) => {
-    const view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
-    //const utf8dec = new TextDecoder("utf-8");
-    //return utf8dec.decode(view);
-    let str = "";
-    for (let i = 0; i < view.length; i++) {
-        str += String.fromCharCode(view[i]);
-    }
-    return str;
-}
-
-let handle = (event) => {
-    let pos = 0;
-    for (let i = 0; i < event.args.length; ++i) {
-        let type = TYPE[event.args[i].type];
-        type.write(BUFFER, pos, event.args[i].value);
-        pos += type.size;
-    }
+let handle = (event, args) => {
+    write_args(BUFFER, event.args, args);
     WASM.exports.handle(event.code);
-}
-
-let call_func = (func, view) => {
-    let pos = 0;
-    let args = [];
-    for (let i = 0; i < func.args.length; ++i) {
-        let type = TYPE[event.args[i]];
-        args.push(type.read(view, pos, event.args[i].value));
-        pos += type.size;
-    }
-    func.func.apply(null, args);
 }
 
 let env = {
@@ -45,17 +18,19 @@ let env = {
     },
     js_timeout: (sec) => {
         setTimeout(() => {
-            handle(new Event.Timeout(parseFloat(sec)));
+            handle(EVENT.TIMEOUT, [parseFloat(sec)]);
         }, 1000*sec);
     },
     js_mod_load: (id, path_ptr, path_len) => {
+        /*
         let path = load_str(path_ptr, path_len);
         let script = document.createElement("script");
         script.addEventListener("load", () => {
-            handle(new Event.Loaded(id));
+            handle(EVENT.LOADED, [id]);
         });
         script.src = path;
         document.head.appendChild(script);
+        */
     },
     js_mod_call: (mod_ptr, mod_len, func_ptr, func_len) => {
         let mod = load_str(mod_ptr, mod_len);
@@ -77,8 +52,8 @@ let render = () => {
         let now = +new Date();
         let ms = now - LAST;
         LAST = now;
-        handle(new Event.Step(parseFloat(0.001*ms)));
-        handle(new Event.Render());
+        handle(EVENT.STEP, [parseFloat(0.001*ms)]);
+        handle(EVENT.RENDER, []);
         window.requestAnimationFrame(render);
     }
 };

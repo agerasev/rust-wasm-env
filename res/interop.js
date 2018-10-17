@@ -54,27 +54,52 @@ let TYPE = {
 };
 
 
-let Event = {};
-Event.Timeout = class {
-	constructor (dt) {
-		this.code = 0x01;
-		this.args = [
-			{"type": "f64", "value": dt}
-		];
-	}
+let EVENT = {
+	"TIMEOUT": {
+		"code": 0x01,
+		"args": ["f64"],
+	},
+	"STEP": {
+		"code": 0x41,
+		"args": ["f64"],
+	},
+	"RENDER": {
+		"code": 0x42,
+		"args": [],
+	},
 };
 
-Event.Step = class {
-	constructor (dt) {
-		this.code = 0x41;
-		this.args = [
-			{"type": "f64", "value": dt}
-		];
-	}
-};
-Event.Render = class {
-	constructor () {
-		this.code = 0x42;
-		this.args = [];
-	}
-};
+let load_str = (ptr, len) => {
+    const view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
+    //const utf8dec = new TextDecoder("utf-8");
+    //return utf8dec.decode(view);
+    let str = "";
+    for (let i = 0; i < view.length; i++) {
+        str += String.fromCharCode(view[i]);
+    }
+    return str;
+}
+
+let read_args = (view, types) => {
+	let pos = 0;
+    let args = [];
+    for (let i = 0; i < types.length; ++i) {
+        let type = TYPE[types[i]];
+        args.push(type.read(view, pos));
+        pos += type.size;
+    }
+    return args;
+}
+
+let write_args = (view, types, args) => {
+	let pos = 0;
+    for (let i = 0; i < types.length; ++i) {
+        let type = TYPE[types[i]];
+        type.write(BUFFER, pos, args[i]);
+        pos += type.size;
+    }
+}
+
+let call_func = (func, view) => {
+    return func.func.apply(null, read_args(view, func.args));
+}
