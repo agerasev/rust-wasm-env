@@ -22,7 +22,6 @@ let env = {
         }, 1000*sec);
     },
     js_mod_load: (id, path_ptr, path_len) => {
-        /*
         let path = load_str(path_ptr, path_len);
         let script = document.createElement("script");
         script.addEventListener("load", () => {
@@ -30,7 +29,6 @@ let env = {
         });
         script.src = path;
         document.head.appendChild(script);
-        */
     },
     js_mod_call: (mod_ptr, mod_len, func_ptr, func_len) => {
         let mod = load_str(mod_ptr, mod_len);
@@ -39,7 +37,6 @@ let env = {
     },
     js_mod_check: (mod_ptr, mod_len) => {
         let mod = load_str(mod_ptr, mod_len);
-        console.log("abc");
         if (MODULES[mod]) {
             return 1;
         }

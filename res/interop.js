@@ -59,6 +59,10 @@ let EVENT = {
 		"code": 0x01,
 		"args": ["f64"],
 	},
+	"LOADED": {
+		"code": 0x02,
+		"args": ["u32"],
+	},
 	"STEP": {
 		"code": 0x41,
 		"args": ["f64"],

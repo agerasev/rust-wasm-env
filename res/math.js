@@ -8,4 +8,8 @@ let math_env = {
 	"sinh": Math.sinh,
 	"cosh": Math.cosh,
 	"tanh": Math.tanh,
+	"asin": Math.asin,
+	"acos": Math.acos,
+	"atan": Math.atan,
+	"Math_atan2": Math.atan2,
 };

@@ -11,23 +11,29 @@ use std::sync::Mutex;
 
 pub use interop::Event;
 
-pub trait App {
-    fn handle(&mut self, event: Event);
-}
 
 extern {
     #[allow(dead_code)]
     fn js_timeout(sec: f64);
     fn js_crypto_random(ptr: *mut u8, len: usize);
-    #[allow(dead_code)]
     fn js_mod_load(id: u32, path_ptr: *const u8, path_len: usize);
-    #[allow(dead_code)]
     fn js_mod_call(mod_ptr: *const u8, mod_len: usize, func_ptr: *const u8, func_len: usize);
     fn js_mod_check(mod_ptr: *const u8, mod_len: usize) -> i32;
 }
 
+pub trait App {
+    fn handle(&mut self, event: Event);
+}
+
 pub fn seed(slice: &mut [u8]) {
     unsafe { js_crypto_random(slice.as_mut_ptr(), slice.len()); }
+}
+
+pub fn mod_load(id: u32, mod_name: &str) {
+    unsafe { js_mod_load(id, mod_name.as_ptr(), mod_name.len()); }
+}
+pub fn mod_call(mod_name: &str, func_name: &str) {
+    unsafe { js_mod_call(mod_name.as_ptr(), mod_name.len(), func_name.as_ptr(), func_name.len()); }
 }
 
 lazy_static! {

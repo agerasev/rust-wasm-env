@@ -5,6 +5,7 @@ pub static BUFFER_SIZE: usize = 0x1000;
 #[derive(Debug)]
 pub enum Event {
     Timeout { dt: f64 },
+    Loaded { id: u32 },
     Step { dt: f64 },
     Render,
 }
@@ -15,6 +16,9 @@ impl Event {
         match code {
             0x01 => Some(Event::Timeout { 
                 dt: r.read_f64::<LE>().unwrap()
+            }),
+            0x02 => Some(Event::Loaded { 
+                id: r.read_u32::<LE>().unwrap()
             }),
             0x41 => Some(Event::Step {
                 dt: r.read_f64::<LE>().unwrap()
