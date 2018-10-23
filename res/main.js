@@ -5,7 +5,7 @@ let handle = (event, args) => {
 
 let env = {
     js_console: (type, ptr, len) => {
-        let str = load_str(ptr, len);
+        let str = load_str_mem(ptr, len);
         if (type == 1) {
             console.error(str);
         } else {
@@ -21,22 +21,22 @@ let env = {
             handle(EVENT.TIMEOUT, [parseFloat(sec)]);
         }, 1000*sec);
     },
-    js_mod_load: (id, path_ptr, path_len) => {
+    js_mod_load: (path_ptr, path_len) => {
         let path = load_str(path_ptr, path_len);
         let script = document.createElement("script");
         script.addEventListener("load", () => {
-            handle(EVENT.LOADED, [id]);
+            handle(EVENT.LOADED, [path]);
         });
         script.src = path;
         document.head.appendChild(script);
     },
     js_mod_call: (mod_ptr, mod_len, func_ptr, func_len) => {
-        let mod = load_str(mod_ptr, mod_len);
-        let func = load_str(func_ptr, func_len);
+        let mod = load_str_mem(mod_ptr, mod_len);
+        let func = load_str_mem(func_ptr, func_len);
         call_func(MODULES[mod].exports[func], BUFFER);
     },
     js_mod_check: (mod_ptr, mod_len) => {
-        let mod = load_str(mod_ptr, mod_len);
+        let mod = load_str_mem(mod_ptr, mod_len);
         if (MODULES[mod]) {
             return 1;
         }

@@ -53,7 +53,6 @@ let TYPE = {
 	}
 };
 
-
 let EVENT = {
 	"TIMEOUT": {
 		"code": 0x01,
@@ -73,15 +72,28 @@ let EVENT = {
 	},
 };
 
-let load_str = (ptr, len) => {
-    const view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
-    //const utf8dec = new TextDecoder("utf-8");
-    //return utf8dec.decode(view);
+let load_str = (view) => {
     let str = "";
     for (let i = 0; i < view.length; i++) {
         str += String.fromCharCode(view[i]);
     }
     return str;
+}
+
+let store_str = (str, view) => {
+    for (let i = 0; i < str.length; i++) {
+        view[i] = String.toCharCode(str[i]);
+    }
+}
+
+let load_str_mem = (ptr, len) => {
+	let view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
+    return load_str(view);
+}
+
+let store_str_mem = (str, ptr, len) => {
+	let view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
+    store_str(str, view);
 }
 
 let read_args = (view, types) => {
