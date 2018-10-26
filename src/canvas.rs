@@ -90,11 +90,8 @@ pub enum Path {
 impl Canvas {
     pub fn new() -> Self {
         MOD_CHECK.call_once(|| {
-            let mod_name = "canvas";
-            unsafe {
-                if ::js_mod_check(mod_name.as_ptr(), mod_name.len()) != 1 {
-                    panic!("js module 'canvas' is not loaded");
-                }
+            if !::mod_check("canvas") {
+                panic!("js module 'canvas' is not loaded");
             }
         });
         Canvas { map: Affine2::new() }

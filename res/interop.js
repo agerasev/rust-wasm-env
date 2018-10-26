@@ -1,118 +1,142 @@
 let BUFFER_SIZE = 0x1000;
 
 let TYPE = {
-	"i8": {
-		"size": 1, 
-		"write": (view, pos, value) => view.setInt8(pos, value, true),
-		"read": (view, pos) => view.getInt8(pos, true)
-	},
-	"u8": {
-		"size": 1, 
-		"write": (view, pos, value) => view.setUint8(pos, value, true),
-		"read": (view, pos) => view.getUint8(pos, true)
-	},
-	"i16": {
-		"size": 2, 
-		"write": (view, pos, value) => view.setInt16(pos, value, true),
-		"read": (view, pos) => view.getInt16(pos, true)
-	},
-	"u16": {
-		"size": 2, 
-		"write": (view, pos, value) => view.setUint16(pos, value, true),
-		"read": (view, pos) => view.getUint16(pos, true)
-	},
-	"i32": {
-		"size": 4, 
-		"write": (view, pos, value) => view.setInt32(pos, value, true),
-		"read": (view, pos) => view.getInt32(pos, true)
-	},
-	"u32": {
-		"size": 4, 
-		"write": (view, pos, value) => view.setUint32(pos, value, true),
-		"read": (view, pos) => view.getUint32(pos, true)
-	},
-	"f32": {
-		"size": 4, 
-		"write": (view, pos, value) => view.setFloat32(pos, value, true),
-		"read": (view, pos) => view.getFloat32(pos, true)
-	},
-	"f64": {
-		"size": 8, 
-		"write": (view, pos, value) => view.setFloat64(pos, value, true),
-		"read": (view, pos) => view.getFloat64(pos, true)
-	},
-	"isize": {
-		"size": 4, 
-		"write": (view, pos, value) => view.setInt32(pos, value, true),
-		"read": (view, pos) => view.getInt32(pos, true)
-	},
-	"usize": {
-		"size": 4, 
-		"write": (view, pos, value) => view.setUint32(pos, value, true),
-		"read": (view, pos) => view.getUint32(pos, true)
-	}
+    "i8": {
+        "size": 1, 
+        "write": (view, pos, value) => view.setInt8(pos, value, true),
+        "read": (view, pos) => view.getInt8(pos, true)
+    },
+    "u8": {
+        "size": 1, 
+        "write": (view, pos, value) => { console.log("u8", pos, value); return view.setUint8(pos, value, true); },
+        "read": (view, pos) => view.getUint8(pos, true)
+    },
+    "i16": {
+        "size": 2, 
+        "write": (view, pos, value) => view.setInt16(pos, value, true),
+        "read": (view, pos) => view.getInt16(pos, true)
+    },
+    "u16": {
+        "size": 2, 
+        "write": (view, pos, value) => view.setUint16(pos, value, true),
+        "read": (view, pos) => view.getUint16(pos, true)
+    },
+    "i32": {
+        "size": 4, 
+        "write": (view, pos, value) => view.setInt32(pos, value, true),
+        "read": (view, pos) => view.getInt32(pos, true)
+    },
+    "u32": {
+        "size": 4, 
+        "write": (view, pos, value) => view.setUint32(pos, value, true),
+        "read": (view, pos) => view.getUint32(pos, true)
+    },
+    "f32": {
+        "size": 4, 
+        "write": (view, pos, value) => view.setFloat32(pos, value, true),
+        "read": (view, pos) => view.getFloat32(pos, true)
+    },
+    "f64": {
+        "size": 8, 
+        "write": (view, pos, value) => view.setFloat64(pos, value, true),
+        "read": (view, pos) => view.getFloat64(pos, true)
+    },
+    "isize": {
+        "size": 4, 
+        "write": (view, pos, value) => view.setInt32(pos, value, true),
+        "read": (view, pos) => view.getInt32(pos, true)
+    },
+    "usize": {
+        "size": 4, 
+        "write": (view, pos, value) => view.setUint32(pos, value, true),
+        "read": (view, pos) => view.getUint32(pos, true)
+    },
+    "str": {
+        "size": -1,
+        "write": (view, pos, value) => {
+            view.setUint32(pos, value.length, true);
+            let len = store_str(view, 4 + pos, value);
+            console.log("str", pos, 4 + len);
+            return 4 + len;
+        },
+        "read": (view, pos) => {
+            let len = view.getUint32(pos, true);
+            return load_str(view, pos + 4, len);
+        }
+    }
 };
 
 let EVENT = {
-	"TIMEOUT": {
-		"code": 0x01,
-		"args": ["f64"],
-	},
-	"LOADED": {
-		"code": 0x02,
-		"args": ["u32"],
-	},
-	"STEP": {
-		"code": 0x41,
-		"args": ["f64"],
-	},
-	"RENDER": {
-		"code": 0x42,
-		"args": [],
-	},
+    "START": {
+        "code": 0x00,
+        "args": [],
+    },
+    "TIMEOUT": {
+        "code": 0x01,
+        "args": ["f64"],
+    },
+    "LOADED": {
+        "code": 0x02,
+        "args": ["str", "u8"],
+    },
+    "STEP": {
+        "code": 0x41,
+        "args": ["f64"],
+    },
+    "RENDER": {
+        "code": 0x42,
+        "args": [],
+    },
 };
 
-let load_str = (view) => {
+let load_str = (view, pos, len) => {
     let str = "";
-    for (let i = 0; i < view.length; i++) {
-        str += String.fromCharCode(view[i]);
+    for (let i = 0; i < len; ++i) {
+        str += String.fromCharCode(view.getUint8(pos + i, true));
     }
-    return str;
+    return [str, len];
 }
 
-let store_str = (str, view) => {
-    for (let i = 0; i < str.length; i++) {
-        view[i] = String.toCharCode(str[i]);
+let store_str = (view, pos, str) => {
+    for (let i = 0; i < str.length; ++i) {
+        view.setUint8(pos + i, str.charCodeAt(i), true);
     }
+    return str.length;
 }
 
 let load_str_mem = (ptr, len) => {
-	let view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
-    return load_str(view);
-}
-
-let store_str_mem = (str, ptr, len) => {
-	let view = new Uint8Array(WASM.exports.memory.buffer, ptr, len);
-    store_str(str, view);
+    let view = new DataView(WASM.exports.memory.buffer, ptr, len);
+    return load_str(view, 0, len)[0];
 }
 
 let read_args = (view, types) => {
-	let pos = 0;
+    let pos = 0;
     let args = [];
     for (let i = 0; i < types.length; ++i) {
         let type = TYPE[types[i]];
-        args.push(type.read(view, pos));
-        pos += type.size;
+        let value = type.read(view, pos);
+        if (type.size >= 0) {
+            pos += type.size;
+            args.push(value);
+        } else {
+            pos += value[1];
+            args.push(value[0]);
+        }
     }
     return args;
 }
 
 let write_args = (view, types, args) => {
-	let pos = 0;
+    let pos = 0;
     for (let i = 0; i < types.length; ++i) {
         let type = TYPE[types[i]];
-        type.write(BUFFER, pos, args[i]);
-        pos += type.size;
+        let value = args[i];
+        let len = type.write(view, pos, value);
+        if (type.size >= 0) {
+            pos += type.size;
+        } else {
+            pos += len;
+        }
     }
 }
 

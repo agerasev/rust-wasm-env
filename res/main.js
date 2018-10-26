@@ -1,3 +1,5 @@
+let nocache = path => path + "?_=" + Math.floor(Math.random()*0x80000000)
+
 let handle = (event, args) => {
     write_args(BUFFER, event.args, args);
     WASM.exports.handle(event.code);
@@ -22,25 +24,41 @@ let env = {
         }, 1000*sec);
     },
     js_mod_load: (path_ptr, path_len) => {
-        let path = load_str(path_ptr, path_len);
+        let path = load_str_mem(path_ptr, path_len);
         let script = document.createElement("script");
         script.addEventListener("load", () => {
-            handle(EVENT.LOADED, [path]);
+            handle(EVENT.LOADED, [path, 0]);
         });
-        script.src = path;
+        script.addEventListener("error", () => {
+            handle(EVENT.LOADED, [path, 1]);
+        });
+        script.src = nocache(path);
         document.head.appendChild(script);
     },
     js_mod_call: (mod_ptr, mod_len, func_ptr, func_len) => {
-        let mod = load_str_mem(mod_ptr, mod_len);
-        let func = load_str_mem(func_ptr, func_len);
-        call_func(MODULES[mod].exports[func], BUFFER);
+        let mod = MODULES[load_str_mem(mod_ptr, mod_len)];
+        if (mod) {
+            let func = mod.exports[load_str_mem(func_ptr, func_len)];
+            if (func) {
+                try {
+                    call_func(func, BUFFER);
+                    return 0;
+                } catch (e) {
+                    return 3;
+                }
+            } else {
+                return 2;
+            }
+        } else {
+            return 1;
+        }
     },
     js_mod_check: (mod_ptr, mod_len) => {
         let mod = load_str_mem(mod_ptr, mod_len);
         if (MODULES[mod]) {
-            return 1;
+            return 0;
         }
-        return 0;
+        return 1;
     }
 };
 
@@ -66,7 +84,7 @@ let import_env = (env, im_env, prefix) => {
 };
 
 let load_wasm = (path, env, onload) => {
-    fetch(path + "?_=" + Math.floor(Math.random()*0x80000000))
+    fetch(nocache(path))
     .then(response => response.arrayBuffer())
     .then(bytes => WebAssembly.instantiate(bytes, {env: env}))
     .then(results => onload(results.instance), results => console.error(results));
