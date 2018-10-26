@@ -18,6 +18,8 @@ extern {
     fn js_mod_load(path_ptr: *const u8, path_len: usize);
     fn js_mod_call(mod_ptr: *const u8, mod_len: usize, func_ptr: *const u8, func_len: usize) -> i32;
     fn js_mod_check(mod_ptr: *const u8, mod_len: usize) -> i32;
+    fn js_request_frame();
+    fn js_drop_object(id: u32) -> i32;
 }
 
 pub trait App {
@@ -29,6 +31,10 @@ pub enum CallError {
     NoMod,
     NoFn,
     FnErr,
+}
+
+pub fn request_frame() {
+    unsafe { js_request_frame(); }
 }
 
 pub fn seed(slice: &mut [u8]) {
@@ -55,6 +61,12 @@ pub fn mod_call(mod_name: &str, func_name: &str) -> Result<(),CallError> {
 
 pub fn mod_check(mod_name: &str) -> bool {
     unsafe { js_mod_check(mod_name.as_ptr(), mod_name.len()) == 0 }
+}
+
+pub unsafe fn drop_object(id: u32) {
+    if js_drop_object(id) != 0 {
+        panic!("there is no object with id: {}", id);
+    }
 }
 
 lazy_static! {

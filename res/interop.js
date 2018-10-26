@@ -8,7 +8,7 @@ let TYPE = {
     },
     "u8": {
         "size": 1, 
-        "write": (view, pos, value) => { console.log("u8", pos, value); return view.setUint8(pos, value, true); },
+        "write": (view, pos, value) => view.setUint8(pos, value, true),
         "read": (view, pos) => view.getUint8(pos, true)
     },
     "i16": {
@@ -56,7 +56,6 @@ let TYPE = {
         "write": (view, pos, value) => {
             view.setUint32(pos, value.length, true);
             let len = store_str(view, 4 + pos, value);
-            console.log("str", pos, 4 + len);
             return 4 + len;
         },
         "read": (view, pos) => {
@@ -79,13 +78,9 @@ let EVENT = {
         "code": 0x02,
         "args": ["str", "u8"],
     },
-    "STEP": {
-        "code": 0x41,
-        "args": ["f64"],
-    },
     "RENDER": {
-        "code": 0x42,
-        "args": [],
+        "code": 0x40,
+        "args": ["f64"],
     },
 };
 

@@ -1,4 +1,5 @@
 let nocache = path => path + "?_=" + Math.floor(Math.random()*0x80000000)
+let LAST_FRAME_TIME = +new Date();
 
 let handle = (event, args) => {
     write_args(BUFFER, event.args, args);
@@ -26,8 +27,15 @@ let env = {
     js_mod_load: (path_ptr, path_len) => {
         let path = load_str_mem(path_ptr, path_len);
         let script = document.createElement("script");
+        script._mod_name = path;
         script.addEventListener("load", () => {
-            handle(EVENT.LOADED, [path, 0]);
+            let s = 0;
+            try {
+                MODULES[path].init();
+            } catch (e) {
+                s = 2;
+            }
+            handle(EVENT.LOADED, [path, s]);
         });
         script.addEventListener("error", () => {
             handle(EVENT.LOADED, [path, 1]);
@@ -59,17 +67,17 @@ let env = {
             return 0;
         }
         return 1;
-    }
-};
-
-let render = () => {
-    if (!DONE) {
-        let now = +new Date();
-        let ms = now - LAST;
-        LAST = now;
-        handle(EVENT.STEP, [parseFloat(0.001*ms)]);
-        handle(EVENT.RENDER, []);
-        window.requestAnimationFrame(render);
+    },
+    js_request_frame: () => {
+        window.requestAnimationFrame(() => {
+            now = +new Date();
+            let ms = now - LAST_FRAME_TIME;
+            LAST_FRAME_TIME = now;
+            handle(EVENT.RENDER, [parseFloat(0.001*ms)]);
+        });
+    },
+    js_drop_object: (id) => {
+        del_object(id);
     }
 };
 
@@ -91,9 +99,10 @@ let load_wasm = (path, env, onload) => {
 };
 
 window.addEventListener("load", () => {
-
+    // bind math routines
     import_env(env, math_env, "");
 
+    // bind preloaded modules
     Object.keys(MODULES).forEach((key) => {
         let mod = MODULES[key];
         mod.init();
@@ -104,27 +113,6 @@ window.addEventListener("load", () => {
         import_env(env, mod_env, "js_" + key + "_");
     });
 
-    let pause_button = document.getElementById("pause");
-    let start = () => {
-        DONE = false;
-        LAST = +new Date();
-        window.requestAnimationFrame(render);
-        console.log("[info] start animation");
-        pause_button.innerText = "Pause";
-    };
-    let stop = () => {
-        DONE = true;
-        console.log("[info] stop animation");
-        pause_button.innerText = "Resume";
-    };
-    pause_button.addEventListener("click", () => {
-        if (DONE) {
-            start();
-        } else {
-            stop();
-        }
-    });
-
     console.log("load wasm");
 
     load_wasm("./main.wasm", env, instance => {
@@ -133,7 +121,7 @@ window.addEventListener("load", () => {
         let buffer_ptr = WASM.exports.init();
         console.log("buffer init");
         BUFFER = new DataView(WASM.exports.memory.buffer, buffer_ptr, BUFFER_SIZE);
-        start();
+        handle(EVENT.START, []);
     });
 
 });

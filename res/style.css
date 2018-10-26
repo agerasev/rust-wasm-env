@@ -7,11 +7,6 @@ body {
 	margin: 0;
 }
 
-#screen {
+.screen {
 	position: fixed;
-}
-
-#pause {
-	position: fixed;
-	margin: 4px;
 }
