@@ -2,7 +2,7 @@ let nocache = path => path + "?_=" + Math.floor(Math.random()*0x80000000)
 let LAST_FRAME_TIME = +new Date();
 
 let handle = (event, args) => {
-    write_args(BUFFER, event.args, args);
+    store_args(BUFFER, event.args, args);
     WASM.exports.handle(event.code);
 }
 

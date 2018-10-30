@@ -1,64 +1,69 @@
 let BUFFER_SIZE = 0x1000;
 
 let TYPE = {
+    "void": {
+        "size": 0, 
+        "store": (view, pos, value) => {},
+        "load": (view, pos) => {}
+    },
     "i8": {
         "size": 1, 
-        "write": (view, pos, value) => view.setInt8(pos, value, true),
-        "read": (view, pos) => view.getInt8(pos, true)
+        "store": (view, pos, value) => view.setInt8(pos, value, true),
+        "load": (view, pos) => view.getInt8(pos, true)
     },
     "u8": {
         "size": 1, 
-        "write": (view, pos, value) => view.setUint8(pos, value, true),
-        "read": (view, pos) => view.getUint8(pos, true)
+        "store": (view, pos, value) => view.setUint8(pos, value, true),
+        "load": (view, pos) => view.getUint8(pos, true)
     },
     "i16": {
         "size": 2, 
-        "write": (view, pos, value) => view.setInt16(pos, value, true),
-        "read": (view, pos) => view.getInt16(pos, true)
+        "store": (view, pos, value) => view.setInt16(pos, value, true),
+        "load": (view, pos) => view.getInt16(pos, true)
     },
     "u16": {
         "size": 2, 
-        "write": (view, pos, value) => view.setUint16(pos, value, true),
-        "read": (view, pos) => view.getUint16(pos, true)
+        "store": (view, pos, value) => view.setUint16(pos, value, true),
+        "load": (view, pos) => view.getUint16(pos, true)
     },
     "i32": {
         "size": 4, 
-        "write": (view, pos, value) => view.setInt32(pos, value, true),
-        "read": (view, pos) => view.getInt32(pos, true)
+        "store": (view, pos, value) => view.setInt32(pos, value, true),
+        "load": (view, pos) => view.getInt32(pos, true)
     },
     "u32": {
         "size": 4, 
-        "write": (view, pos, value) => view.setUint32(pos, value, true),
-        "read": (view, pos) => view.getUint32(pos, true)
+        "store": (view, pos, value) => view.setUint32(pos, value, true),
+        "load": (view, pos) => view.getUint32(pos, true)
     },
     "f32": {
         "size": 4, 
-        "write": (view, pos, value) => view.setFloat32(pos, value, true),
-        "read": (view, pos) => view.getFloat32(pos, true)
+        "store": (view, pos, value) => view.setFloat32(pos, value, true),
+        "load": (view, pos) => view.getFloat32(pos, true)
     },
     "f64": {
         "size": 8, 
-        "write": (view, pos, value) => view.setFloat64(pos, value, true),
-        "read": (view, pos) => view.getFloat64(pos, true)
+        "store": (view, pos, value) => view.setFloat64(pos, value, true),
+        "load": (view, pos) => view.getFloat64(pos, true)
     },
     "isize": {
         "size": 4, 
-        "write": (view, pos, value) => view.setInt32(pos, value, true),
-        "read": (view, pos) => view.getInt32(pos, true)
+        "store": (view, pos, value) => view.setInt32(pos, value, true),
+        "load": (view, pos) => view.getInt32(pos, true)
     },
     "usize": {
         "size": 4, 
-        "write": (view, pos, value) => view.setUint32(pos, value, true),
-        "read": (view, pos) => view.getUint32(pos, true)
+        "store": (view, pos, value) => view.setUint32(pos, value, true),
+        "load": (view, pos) => view.getUint32(pos, true)
     },
     "str": {
         "size": -1,
-        "write": (view, pos, value) => {
+        "store": (view, pos, value) => {
             view.setUint32(pos, value.length, true);
             let len = store_str(view, 4 + pos, value);
             return 4 + len;
         },
-        "read": (view, pos) => {
+        "load": (view, pos) => {
             let len = view.getUint32(pos, true);
             return load_str(view, pos + 4, len);
         }
@@ -76,7 +81,7 @@ let EVENT = {
     },
     "LOADED": {
         "code": 0x02,
-        "args": ["str", "u8"],
+        "args": ["str", "i32"],
     },
     "RENDER": {
         "code": 0x40,
@@ -104,12 +109,12 @@ let load_str_mem = (ptr, len) => {
     return load_str(view, 0, len)[0];
 }
 
-let read_args = (view, types) => {
+let load_args = (view, types) => {
     let pos = 0;
     let args = [];
     for (let i = 0; i < types.length; ++i) {
         let type = TYPE[types[i]];
-        let value = type.read(view, pos);
+        let value = type.load(view, pos);
         if (type.size >= 0) {
             pos += type.size;
             args.push(value);
@@ -121,12 +126,12 @@ let read_args = (view, types) => {
     return args;
 }
 
-let write_args = (view, types, args) => {
+let store_args = (view, types, args) => {
     let pos = 0;
     for (let i = 0; i < types.length; ++i) {
         let type = TYPE[types[i]];
         let value = args[i];
-        let len = type.write(view, pos, value);
+        let len = type.store(view, pos, value);
         if (type.size >= 0) {
             pos += type.size;
         } else {
@@ -136,5 +141,7 @@ let write_args = (view, types, args) => {
 }
 
 let call_func = (func, view) => {
-    return func.func.apply(null, read_args(view, func.args));
+    let args = load_args(view, func.args);
+    let ret = func.func.apply(null, args);
+    store_args(view, [func.ret], [ret]);
 }

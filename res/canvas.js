@@ -2,30 +2,6 @@ class CanvasModule {
     constructor() {
         let mkcol = (r,g,b,a) => "rgba(" + 255*r + "," + 255*g + "," + 255*b + "," + a + ")"
 
-        this.resize = () => {
-            if (this.screen != null) {
-                let width = 
-                    window.innerWidth || 
-                    document.documentElement.clientWidth || 
-                    document.body.clientWidth;
-                let height = 
-                    window.innerHeight ||
-                    document.documentElement.clientHeight ||
-                    document.body.clientHeight;
-
-                this.screen.canvas.width = width;
-                this.screen.canvas.height = height;
-
-                console.log("[info] resize: " + width + " x " + height);
-            }
-        };
-
-        this.init = () => {
-            window.addEventListener("resize", this.resize);
-        };
-
-        this.screen = null;
-
         this.exports = {
             "create": {
                 "func": () => {
@@ -35,24 +11,7 @@ class CanvasModule {
                     return add_object(obj);
                 },
                 "args": [],
-            },
-
-            "set_screen": {
-                "func": (id) => {
-                    if (this.screen != null) {
-                        this.screen.canvas.remove();
-                        this.screen.canvas.classList.remove("screen");
-                    }
-                    if (id == 0) {
-                        this.screen = null;
-                    } else {
-                        this.screen = OBJECTS[id];
-                        this.screen.canvas.classList.add("screen");
-                        document.body.appendChild(this.screen.canvas);
-                        this.resize();
-                    }
-                },
-                "args": ["u32"],
+                "ret": "void",
             },
 
             "size": {
@@ -63,6 +22,7 @@ class CanvasModule {
                     view[1] = canvas.height;
                 },
                 "args": ["usize"],
+                "ret": "void",
             },
 
             "set_transform": {
@@ -70,6 +30,7 @@ class CanvasModule {
                     OBJECTS[id].context.setTransform(m00, m01, m10, m11, x, y);
                 },
                 "args": ["f64","f64","f64","f64","f64","f64"],
+                "ret": "void",
             },
 
             "fill_style": {
@@ -77,18 +38,21 @@ class CanvasModule {
                     OBJECTS[id].context.fillStyle = mkcol(r,g,b,a);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
             "stroke_style": {
                 "func": (id,r,g,b,a) => {
                     OBJECTS[id].context.strokeStyle = mkcol(r,g,b,a);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
             "line_width": {
                 "func": (id,w) => {
                     OBJECTS[id].context.lineWidth = w;
                 },
                 "args": ["f64"],
+                "ret": "void",
             },
 
             "clear_rect": {
@@ -96,18 +60,21 @@ class CanvasModule {
                     OBJECTS[id].context.clearRect(x,y,w,h);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
             "fill_rect": {
                 "func": (id,x,y,w,h) => {
                     OBJECTS[id].context.fillRect(x,y,w,h);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
             "stroke_rect": {
                 "func": (id,x,y,w,h) => {
                     OBJECTS[id].context.strokeRect(x,y,w,h);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
 
             "begin_path": {
@@ -115,24 +82,28 @@ class CanvasModule {
                     OBJECTS[id].context.beginPath();
                 },
                 "args": [],
+                "ret": "void",
             },
             "close_path": {
                 "func": (id,) => {
                     OBJECTS[id].context.closePath();
                 },
                 "args": [],
+                "ret": "void",
             },
             "fill": {
                 "func": (id,) => {
                     OBJECTS[id].context.fill();
                 },
                 "args": [],
+                "ret": "void",
             },
             "stroke": {
                 "func": (id,) => {
                     OBJECTS[id].context.stroke();
                 },
                 "args": [],
+                "ret": "void",
             },
             
             "arc": {
@@ -140,44 +111,54 @@ class CanvasModule {
                     OBJECTS[id].context.arc(x,y,r,sa,ea);
                 },
                 "args": ["f64","f64","f64","f64","f64"],
+                "ret": "void",
             },
             "move_to": {
                 "func": (id,x,y) => {
                     OBJECTS[id].context.moveTo(x,y);
                 },
                 "args": ["f64","f64"],
+                "ret": "void",
             },
             "line_to": {
                 "func": (id,x,y) => {
                     OBJECTS[id].context.lineTo(x,y);
                 },
                 "args": ["f64","f64"],
+                "ret": "void",
             },
             "bezier_curve_to": {
                 "func": (id,x1,y1,x2,y2,x,y) => {
                     OBJECTS[id].context.bezierCurveTo(x1,y1,x2,y2,x,y);
                 },
                 "args": ["f64","f64","f64","f64","f64","f64"],
+                "ret": "void",
             },
             "quadratic_curve_to": {
                 "func": (id,x1,y1,x,y) => {
                     OBJECTS[id].context.quadraticCurveTo(x1,y1,x,y);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
             "ellipse": {
                 "func": (id,x,y,rx,ry,rot,sa,ea) => {
                     OBJECTS[id].context.ellipse(x,y,rx,ry,rot,sa,ea,0);
                 },
                 "args": ["f64","f64","f64","f64","f64","f64","f64"],
+                "ret": "void",
             },
             "rect": {
                 "func": (id,x,y,w,h) => {
                     OBJECTS[id].context.rect(x,y,w,h);
                 },
                 "args": ["f64","f64","f64","f64"],
+                "ret": "void",
             },
         }
+    }
+    init() {
+
     }
 };
 
