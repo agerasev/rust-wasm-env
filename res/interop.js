@@ -81,7 +81,11 @@ let EVENT = {
     },
     "LOADED": {
         "code": 0x02,
-        "args": ["str", "i32"],
+        "args": ["str", "i32", "u32", "u32"],
+    },
+    "MODULE": {
+        "code": 0x03,
+        "args": ["str", "i32", "u32"],
     },
     "RENDER": {
         "code": 0x40,

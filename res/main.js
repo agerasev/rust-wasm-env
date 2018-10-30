@@ -27,24 +27,25 @@ let env = {
     js_mod_load: (path_ptr, path_len) => {
         let path = load_str_mem(path_ptr, path_len);
         let script = document.createElement("script");
-        script._mod_name = path;
+        let id = MOD_COUNTER++;
+        script._mod_id = id;
         script.addEventListener("load", () => {
             let s = 0;
             try {
-                MODULES[path].init();
+                MODULES[id].init();
             } catch (e) {
                 s = 2;
             }
-            handle(EVENT.LOADED, [path, s]);
+            handle(EVENT.MODULE, [path, s, id]);
         });
         script.addEventListener("error", () => {
-            handle(EVENT.LOADED, [path, 1]);
+            handle(EVENT.MODULE, [path, 1, id]);
         });
         script.src = nocache(path);
         document.head.appendChild(script);
     },
-    js_mod_call: (mod_ptr, mod_len, func_ptr, func_len) => {
-        let mod = MODULES[load_str_mem(mod_ptr, mod_len)];
+    js_mod_call: (mod_id, func_ptr, func_len) => {
+        let mod = MODULES[mod_id];
         if (mod) {
             let func = mod.exports[load_str_mem(func_ptr, func_len)];
             if (func) {
@@ -61,9 +62,8 @@ let env = {
             return 1;
         }
     },
-    js_mod_check: (mod_ptr, mod_len) => {
-        let mod = load_str_mem(mod_ptr, mod_len);
-        if (MODULES[mod]) {
+    js_mod_check: (mod_id) => {
+        if (MODULES[mod_id]) {
             return 0;
         }
         return 1;

@@ -2,6 +2,7 @@ let WASM = null;
 let BUFFER = null;
 
 let MODULES = {};
+let MOD_COUNTER = 1;
 
 let OBJECTS = {};
 let ID_COUNTER = 1;
