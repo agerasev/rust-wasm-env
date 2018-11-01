@@ -36,9 +36,10 @@ buildcmd.append("--target=%s" % target)
 lcall(buildcmd)
 
 resdir = "wasm/res/"
+templatedir = "wasm/template/"
 builddir = "target/%s/%s/" % (target, "release" if release else "debug")
 
-lcp(resdir + "index.html", "index.html")
+lcp(templatedir + "index.html", "index.html")
 if gc:
     wasmgc = "wasm-gc"
     lcp(builddir + "main.wasm", "big.wasm")

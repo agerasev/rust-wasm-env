@@ -34,6 +34,7 @@ let env = {
             try {
                 MODULES[id].init();
             } catch (e) {
+                console.error(e);
                 s = 2;
             }
             handle(EVENT.MODULE, [path, s, id]);
@@ -53,6 +54,7 @@ let env = {
                     call_func(func, BUFFER);
                     return 0;
                 } catch (e) {
+                    console.error(e);
                     return 3;
                 }
             } else {
