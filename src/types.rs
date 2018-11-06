@@ -3,9 +3,6 @@ use std::mem::size_of;
 use std::io::{Read, Write};
 use byteorder::{LE, ReadBytesExt, WriteBytesExt};
 
-use module::Module;
-
-pub static BUFFER_SIZE: usize = 0x1000;
 
 #[derive(Debug)]
 pub enum Error {
@@ -145,61 +142,6 @@ impl Type for String {
                 }
             },
             Err(e) => Err(Error::Io(e))
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum Resource {}
-
-#[derive(Debug)]
-pub enum ModuleError {
-    Load,
-    Init,
-}
-
-#[derive(Debug)]
-pub enum Event {
-    Start,
-    Timeout { dt: f64 },
-    Loaded,
-    Module { path: String, module: Result<Module, ModuleError> },
-    Render { dt: f64 },
-}
-
-impl Event {
-    pub fn from(code: u32, data: &Vec<u8>) -> Option<Self> {
-        let r = &mut (data as &[u8]);
-        match code {
-            0x00 => Some(Event::Start),
-            0x01 => Some(Event::Timeout { 
-                dt: f64::load(r).unwrap()
-            }),
-            0x02 => {
-                /*
-                let path = String::load(r).unwrap();
-                let status = i32::load(r).unwrap();
-                let id = u32::load(r).unwrap();
-                let rtype = i32::load(r).unwrap();
-                */
-                Some(Event::Loaded)
-            },
-            0x03 => {
-                let path = String::load(r).unwrap();
-                let status = i32::load(r).unwrap();
-                let id = u32::load(r).unwrap();
-                let module = match status {
-                    0 => Ok(Module::new(id).unwrap()),
-                    1 => Err(ModuleError::Load),
-                    2 => Err(ModuleError::Init),
-                    _ => panic!("unknown resource load status: {}", status),
-                };
-                Some(Event::Module { path, module })
-            },
-            0x40 => Some(Event::Render {
-                dt: f64::load(r).unwrap()
-            }),
-            _ => None,
         }
     }
 }

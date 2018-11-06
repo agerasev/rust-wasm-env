@@ -1,9 +1,19 @@
 let nocache = path => path + "?_=" + Math.floor(Math.random()*0x80000000)
 let LAST_FRAME_TIME = +new Date();
 
-let handle = (event, args) => {
-    store_args(BUFFER, event.args, args);
-    WASM.exports.handle(event.code);
+let HANDLING = false;
+let handle = (event, args, types) => {
+    if (HANDLING) {
+        console.error("[bug] try to handle events recursively");
+    } else {
+        HANDLING = true;
+        if (types === undefined) {
+            types = event.args;
+        }
+        store_args(BUFFER, types, args);
+        WASM.exports.handle(event.code);
+        HANDLING = false;
+    }
 }
 
 let env = {

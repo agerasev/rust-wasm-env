@@ -5,12 +5,12 @@ extern crate vecmat;
 
 pub mod console;
 pub mod canvas;
-pub mod interop;
+pub mod types;
+pub mod event;
 pub mod module;
 
 use std::sync::Mutex;
-
-pub use interop::Event;
+use event::Event;
 
 extern {
     #[allow(dead_code)]
@@ -38,8 +38,10 @@ pub unsafe fn drop_object(id: u32) {
     }
 }
 
+pub static BUFFER_SIZE: usize = 0x1000;
+
 lazy_static! {
-    static ref BUFFER: Mutex<Vec<u8>> = Mutex::new(vec!(0; interop::BUFFER_SIZE));
+    static ref BUFFER: Mutex<Vec<u8>> = Mutex::new(vec!(0; BUFFER_SIZE));
 }
 
 pub fn _handle(app: &mut Box<App+Send>, code: u32) {
@@ -54,7 +56,12 @@ pub fn _buffer_ptr() -> *mut u8 {
     BUFFER.lock().unwrap().as_mut_ptr()
 }
 
-pub fn with_buffer<F: FnMut(&mut [u8])>(mut f: F) {
+pub fn with_buffer<F: FnMut(&[u8])>(mut f: F) {
+    let mut guard = BUFFER.lock().unwrap();
+    f(guard.as_mut());
+}
+
+pub fn with_buffer_mut<F: FnMut(&mut [u8])>(mut f: F) {
     let mut guard = BUFFER.lock().unwrap();
     f(guard.as_mut());
 }

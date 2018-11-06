@@ -59,13 +59,13 @@ let TYPE = {
     "str": {
         "size": -1,
         "store": (view, pos, value) => {
-            view.setUint32(pos, value.length, true);
-            let len = store_str(view, 4 + pos, value);
+            TYPE["usize"].store(view, pos, value.length);
+            let len = store_str(view, pos + TYPE["usize"].size, value);
             return 4 + len;
         },
         "load": (view, pos) => {
-            let len = view.getUint32(pos, true);
-            return load_str(view, pos + 4, len);
+            let len = TYPE["usize"].load(view, pos);
+            return load_str(view, pos + TYPE["usize"].size, len);
         }
     }
 };
@@ -90,6 +90,10 @@ let EVENT = {
     "RENDER": {
         "code": 0x40,
         "args": ["f64"],
+    },
+    "USER": {
+        "code": 0xFF,
+        "args": [],
     },
 };
 
