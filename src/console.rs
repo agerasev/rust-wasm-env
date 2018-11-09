@@ -1,7 +1,7 @@
 use std::panic;
 
 extern {
-    fn js_console(t: i32, ptr: *const u8, len: usize);
+    fn js_console(t: i32, ptr: *const u16, len: usize);
 }
 
 pub enum Kind {
@@ -10,7 +10,8 @@ pub enum Kind {
 }
 
 pub fn write(t: Kind, msg: &str) {
-    unsafe { js_console(match t { Kind::Log => 0, Kind::Error => 1}, msg.as_ptr(), msg.len()); }
+    let msg16: Vec<u16> = msg.encode_utf16().collect();
+    unsafe { js_console(match t { Kind::Log => 0, Kind::Error => 1}, msg16.as_ptr(), msg16.len()); }
 }
 
 pub fn log(msg: &str) {

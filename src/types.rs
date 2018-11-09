@@ -7,7 +7,7 @@ use byteorder::{LE, ReadBytesExt, WriteBytesExt};
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
-    FromUtf8(std::string::FromUtf8Error),
+    FromUtf16(std::string::FromUtf16Error),
     String(String),
 }
 
@@ -127,21 +127,15 @@ impl Type for String {
     }
     fn load<R>(r: &mut R) -> Result<Self, Error> where R: Read {
         let len = try!(r.read_u32::<LE>().map_err(|e| Error::Io(e))) as usize;
-        let mut buf = vec!(0 as u8; len);
-        try!(r.read_exact(&mut buf).map_err(|e| Error::Io(e)));
-        String::from_utf8(buf).map_err(|e| Error::FromUtf8(e))
+        let mut buf = vec!(0 as u16; len);
+        try!(r.read_u16_into::<LE>(&mut buf).map_err(|e| Error::Io(e)));
+        String::from_utf16(&buf).map_err(|e| Error::FromUtf16(e))
     }
     fn store<W>(&self, w: &mut W) -> Result<(),Error> where W: Write {
         try!(w.write_u32::<LE>(self.len() as u32).map_err(|e| Error::Io(e)));
-        match w.write(self.as_bytes()) {
-            Ok(x) => {
-                if x == self.len() {
-                    Ok(())
-                } else {
-                    Err(Error::String(String::from("Cannot store all bytes")))
-                }
-            },
-            Err(e) => Err(Error::Io(e))
+        for ch in self.encode_utf16() {
+            try!(w.write_u16::<LE>(ch).map_err(|e| Error::Io(e)));
         }
+        Ok(())
     }
 }

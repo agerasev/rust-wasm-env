@@ -100,20 +100,20 @@ let EVENT = {
 let load_str = (view, pos, len) => {
     let str = "";
     for (let i = 0; i < len; ++i) {
-        str += String.fromCharCode(view.getUint8(pos + i, true));
+        str += String.fromCharCode(view.getUint16(pos + 2*i, true));
     }
-    return [str, len];
+    return [str, 2*len];
 }
 
 let store_str = (view, pos, str) => {
     for (let i = 0; i < str.length; ++i) {
-        view.setUint8(pos + i, str.charCodeAt(i), true);
+        view.setUint16(pos + 2*i, str.charCodeAt(i), true);
     }
-    return str.length;
+    return 2*str.length;
 }
 
 let load_str_mem = (ptr, len) => {
-    let view = new DataView(WASM.exports.memory.buffer, ptr, len);
+    let view = new DataView(WASM.exports.memory.buffer, ptr, 2*len);
     return load_str(view, 0, len)[0];
 }
 

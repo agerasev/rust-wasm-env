@@ -1,11 +1,12 @@
 extern {
-    fn js_mod_load(path_ptr: *const u8, path_len: usize);
-    fn js_mod_call(mod_id: u32, func_ptr: *const u8, func_len: usize) -> i32;
+    fn js_mod_load(path_ptr: *const u16, path_len: usize);
+    fn js_mod_call(mod_id: u32, fname_ptr: *const u16, fname_len: usize) -> i32;
     fn js_mod_check(mod_id: u32) -> i32;
 }
 
 pub fn load(path: &str) {
-    unsafe { js_mod_load(path.as_ptr(), path.len()); }
+    let path16: Vec<u16> = path.encode_utf16().collect();
+    unsafe { js_mod_load(path16.as_ptr(), path16.len()); }
 }
 
 pub fn check_loaded(id: u32) -> bool {
@@ -36,8 +37,9 @@ impl Module {
         self.id_
     }
     pub fn call(&mut self, func_name: &str) -> Result<(),CallError> {
+        let fname16: Vec<u16> = func_name.encode_utf16().collect();
         let ret = unsafe { js_mod_call(
-            self.id(), func_name.as_ptr(), func_name.len()
+            self.id(), fname16.as_ptr(), fname16.len()
         ) };
         match ret {
             0 => Ok(()),
