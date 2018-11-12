@@ -1,5 +1,3 @@
-let BUFFER_SIZE = 0x1000;
-
 let TYPE = {
     "void": {
         "size": 0, 
@@ -58,10 +56,12 @@ let TYPE = {
     },
     "str": {
         "size": -1,
+        "get_size": (value) => {
+            return 4 + 2*value.length;
+        },
         "store": (view, pos, value) => {
             TYPE["usize"].store(view, pos, value.length);
             let len = store_str(view, pos + TYPE["usize"].size, value);
-            return 4 + len;
         },
         "load": (view, pos) => {
             let len = TYPE["usize"].load(view, pos);
@@ -93,7 +93,6 @@ let EVENT = {
     },
     "USER": {
         "code": 0xFF,
-        "args": [],
     },
 };
 
@@ -102,20 +101,19 @@ let load_str = (view, pos, len) => {
     for (let i = 0; i < len; ++i) {
         str += String.fromCharCode(view.getUint16(pos + 2*i, true));
     }
-    return [str, 2*len];
-}
+    return str;
+};
 
 let store_str = (view, pos, str) => {
     for (let i = 0; i < str.length; ++i) {
         view.setUint16(pos + 2*i, str.charCodeAt(i), true);
     }
-    return 2*str.length;
-}
+};
 
 let load_str_mem = (ptr, len) => {
     let view = new DataView(WASM.exports.memory.buffer, ptr, 2*len);
-    return load_str(view, 0, len)[0];
-}
+    return load_str(view, 0, len);
+};
 
 let load_args = (view, types) => {
     let pos = 0;
@@ -125,31 +123,37 @@ let load_args = (view, types) => {
         let value = type.load(view, pos);
         if (type.size >= 0) {
             pos += type.size;
-            args.push(value);
         } else {
-            pos += value[1];
-            args.push(value[0]);
+            pos += type.get_size(value);
         }
+        args.push(value);
     }
     return args;
-}
+};
 
 let store_args = (view, types, args) => {
     let pos = 0;
     for (let i = 0; i < types.length; ++i) {
         let type = TYPE[types[i]];
         let value = args[i];
-        let len = type.store(view, pos, value);
+        if (view !== null) {
+            type.store(view, pos, value);
+        }
         if (type.size >= 0) {
             pos += type.size;
         } else {
-            pos += len;
+            pos += type.get_size(value);
         }
     }
-}
+    return pos;
+};
+
+let count_args_size = (types, args) => {
+    return store_args(null, types, args);
+};
 
 let call_func = (func, view) => {
     let args = load_args(view, func.args);
     let ret = func.func.apply(null, args);
     store_args(view, [func.ret], [ret]);
-}
+};

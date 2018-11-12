@@ -8,7 +8,6 @@ use byteorder::{LE, ReadBytesExt, WriteBytesExt};
 pub enum Error {
     Io(std::io::Error),
     FromUtf16(std::string::FromUtf16Error),
-    String(String),
 }
 
 pub trait Type: Sized {

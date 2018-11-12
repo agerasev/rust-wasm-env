@@ -13,21 +13,19 @@ pub enum ModuleError {
 #[derive(Debug)]
 pub enum Event {
     Start,
-    Timeout { dt: f64 },
+    Timeout(f64),
     Loaded,
     Module { path: String, module: Result<Module, ModuleError> },
     Render { dt: f64 },
-    User,
+    User(Vec<u8>),
 }
 
 impl Event {
-    pub fn from(code: u32, data: &Vec<u8>) -> Option<Self> {
+    pub fn from(data: &Vec<u8>) -> Option<Self> {
         let r = &mut (data as &[u8]);
-        match code {
+        match u32::load(r).unwrap() {
             0x00 => Some(Event::Start),
-            0x01 => Some(Event::Timeout { 
-                dt: f64::load(r).unwrap()
-            }),
+            0x01 => Some(Event::Timeout(f64::load(r).unwrap())),
             0x02 => {
                 /*
                 let path = String::load(r).unwrap();
@@ -52,7 +50,7 @@ impl Event {
             0x40 => Some(Event::Render {
                 dt: f64::load(r).unwrap()
             }),
-            0xFF => Some(Event::User),
+            0xFF => Some(Event::User(r.to_vec())),
             _ => None,
         }
     }

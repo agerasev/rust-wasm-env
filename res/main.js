@@ -1,19 +1,19 @@
 let nocache = path => path + "?_=" + Math.floor(Math.random()*0x80000000)
 let LAST_FRAME_TIME = +new Date();
 
-let HANDLING = false;
 let handle = (event, args, types) => {
-    if (HANDLING) {
-        console.error("[bug] try to handle events recursively");
-    } else {
-        HANDLING = true;
         if (types === undefined) {
             types = event.args;
         }
-        store_args(BUFFER, types, args);
-        WASM.exports.handle(event.code);
-        HANDLING = false;
-    }
+        types = ["u32"].concat(types);
+        args = [event.code].concat(args);
+
+        let size = count_args_size(types, args);
+        let ptr = WASM.exports.alloc(size);
+        let buffer = new DataView(WASM.exports.memory.buffer, ptr, size);
+        store_args(buffer, types, args);
+        WASM.exports.handle(ptr);
+        WASM.exports.free(ptr);
 }
 
 let env = {
@@ -55,13 +55,14 @@ let env = {
         script.src = nocache(path);
         document.head.appendChild(script);
     },
-    js_mod_call: (mod_id, func_ptr, func_len) => {
+    js_mod_call: (mod_id, func_ptr, func_len, buf_ptr, buf_len) => {
         let mod = MODULES[mod_id];
         if (mod) {
             let func = mod.exports[load_str_mem(func_ptr, func_len)];
+            let buf = new DataView(WASM.exports.memory.buffer, buf_ptr, buf_len);
             if (func) {
                 try {
-                    call_func(func, BUFFER);
+                    call_func(func, buf);
                     return 0;
                 } catch (e) {
                     console.error(e);
@@ -130,9 +131,7 @@ window.addEventListener("load", () => {
     load_wasm("./main.wasm", env, instance => {
         WASM = instance;
         console.log("wasm init");
-        let buffer_ptr = WASM.exports.init();
-        console.log("buffer init");
-        BUFFER = new DataView(WASM.exports.memory.buffer, buffer_ptr, BUFFER_SIZE);
+        WASM.exports.init();
         handle(EVENT.START, []);
     });
 

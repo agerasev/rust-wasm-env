@@ -9,7 +9,10 @@ pub mod types;
 pub mod event;
 pub mod module;
 
+use std::cell::Cell;
 use std::sync::Mutex;
+use std::collections::{VecDeque, BTreeMap};
+
 use event::Event;
 
 extern {
@@ -38,66 +41,103 @@ pub unsafe fn drop_object(id: u32) {
     }
 }
 
-pub static BUFFER_SIZE: usize = 0x1000;
+struct WasmData {
+    heap: BTreeMap<usize, Vec<u8>>,
+    events: VecDeque<Event>,
+}
+
+impl WasmData {
+    fn new() -> Self {
+        Self { 
+            heap: BTreeMap::new(), 
+            events: VecDeque::new(),
+        }
+    }
+}
 
 lazy_static! {
-    static ref BUFFER: Mutex<Vec<u8>> = Mutex::new(vec!(0; BUFFER_SIZE));
+    static ref WASM: Mutex<WasmData> = Mutex::new(WasmData::new());
 }
 
-pub fn _handle(app: &mut Box<App+Send>, code: u32) {
-    let event = {
-        let mut guard = BUFFER.lock().unwrap();
-        Event::from(code, guard.as_mut()).unwrap()
+thread_local! {
+    static INSIDE: Cell<bool> = Cell::new(false);
+}
+
+pub fn _alloc(size: usize) -> *mut u8 {
+    let mut vec = vec!(0 as u8; size);
+    let ptr = vec.as_mut_ptr();
+    let key = ptr as usize;
+
+    let mut wasm = WASM.lock().unwrap();
+    let heap = &mut wasm.heap;
+    if heap.contains_key(&key) {
+        panic!("Address {} already occupied in the heap", key);
+    }
+    heap.insert(key, vec);
+    
+    ptr
+}
+
+pub fn _free(ptr: *mut u8) {
+    let key = ptr as usize;
+    let mut wasm = WASM.lock().unwrap();
+    let heap = &mut wasm.heap;
+    if !heap.contains_key(&key) {
+        panic!("Address {} doesn't exist in the heap", key);
+    }
+    heap.remove(&key);
+}
+
+pub fn _handle(app: &Mutex<Box<App+Send>>, ptr: *mut u8) {
+    {
+        let key = ptr as usize;
+        let mut wasm = WASM.lock().unwrap();
+        let event = match wasm.heap.get(&key) {
+            Some(vec) => Event::from(vec).unwrap(),
+            None => panic!("Invalid buffer address {} in the heap", key),
+        };
+        wasm.events.push_front(event);
     };
-    app.handle(event);
-}
-
-pub fn _buffer_ptr() -> *mut u8 {
-    BUFFER.lock().unwrap().as_mut_ptr()
-}
-
-pub fn with_buffer<F: FnMut(&[u8])>(mut f: F) {
-    let mut guard = BUFFER.lock().unwrap();
-    f(guard.as_mut());
-}
-
-pub fn with_buffer_mut<F: FnMut(&mut [u8])>(mut f: F) {
-    let mut guard = BUFFER.lock().unwrap();
-    f(guard.as_mut());
+    INSIDE.with(|inside| {
+        if !inside.get() {
+            inside.set(true);
+            loop {
+                if let Some(event) = WASM.lock().unwrap().events.pop_back() {
+                    app.lock().unwrap().handle(event);
+                } else {
+                    break;
+                }
+            }
+            inside.set(false);
+        }
+    });
 }
 
 #[macro_export]
 macro_rules! wasm_bind {
     ($wasm:ident, $appfn:expr) => (
         lazy_static! {
-            static ref APP: std::sync::Mutex<Option<Box<$wasm::App+Send>>> = std::sync::Mutex::new(None);
+            static ref APP: std::sync::Mutex<Box<$wasm::App+Send>> = std::sync::Mutex::new($appfn());
         }
 
         #[no_mangle]
-        pub extern fn init() -> *mut u8 {
+        pub extern fn init() {
             $wasm::console::setup();
-            let mut guard = APP.lock().unwrap();
-            match *guard {
-                None => { *guard = Some($appfn()); },
-                Some(_) => { $wasm::console::error("App is already initialized!"); },
-            }
-            $wasm::_buffer_ptr()
         }
 
         #[no_mangle]
-        pub extern fn handle(code: u32) {
-            let mut guard = APP.lock().unwrap();
-            let app = guard.as_mut().unwrap();
-            $wasm::_handle(app, code);
+        pub extern fn alloc(size: usize) -> *mut u8 {
+            $wasm::_alloc(size)
         }
 
         #[no_mangle]
-        pub extern fn quit() {
-            let mut guard = APP.lock().unwrap();
-            match *guard {
-                None => { $wasm::console::error("App is already None!"); },
-                Some(_) => { *guard = None; },
-            }
+        pub extern fn free(ptr: *mut u8) {
+            $wasm::_free(ptr)
+        }
+
+        #[no_mangle]
+        pub extern fn handle(ptr: *mut u8) {
+            $wasm::_handle(&APP, ptr);
         }
     )
 }
