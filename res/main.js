@@ -1,17 +1,13 @@
 let nocache = path => path + "?_=" + Math.floor(Math.random()*0x80000000)
 let LAST_FRAME_TIME = +new Date();
 
-let handle = (event, args, types) => {
-        if (types === undefined) {
-            types = event.args;
-        }
-        types = ["u32"].concat(types);
-        args = [event.code].concat(args);
-
-        let size = count_args_size(types, args);
+let handle = (tuple) => {
+        let types = tuple[0];
+        let values = tuple[1];
+        let size = count_args_size(types, values);
         let ptr = WASM.exports.alloc(size);
         let buffer = new DataView(WASM.exports.memory.buffer, ptr, size);
-        store_args(buffer, types, args);
+        store_args(buffer, types, values);
         WASM.exports.handle(ptr);
         WASM.exports.free(ptr);
 }
@@ -31,7 +27,7 @@ let env = {
     },
     js_timeout: (sec) => {
         setTimeout(() => {
-            handle(EVENT.TIMEOUT, [parseFloat(sec)]);
+            handle(EVENT.TIMEOUT.pack([parseFloat(sec)]));
         }, 1000*sec);
     },
     js_mod_load: (path_ptr, path_len) => {
@@ -47,10 +43,10 @@ let env = {
                 console.error(e);
                 s = 2;
             }
-            handle(EVENT.MODULE, [path, s, id]);
+            handle(EVENT.MODULE.pack([path, s, id]));
         });
         script.addEventListener("error", () => {
-            handle(EVENT.MODULE, [path, 1, id]);
+            handle(EVENT.MODULE.pack([path, 1, id]));
         });
         script.src = nocache(path);
         document.head.appendChild(script);
@@ -86,7 +82,7 @@ let env = {
             now = +new Date();
             let ms = now - LAST_FRAME_TIME;
             LAST_FRAME_TIME = now;
-            handle(EVENT.RENDER, [parseFloat(0.001*ms)]);
+            handle(EVENT.RENDER.pack([parseFloat(0.001*ms)]));
         });
     },
     js_drop_object: (id) => {
@@ -132,7 +128,7 @@ window.addEventListener("load", () => {
         WASM = instance;
         console.log("wasm init");
         WASM.exports.init();
-        handle(EVENT.START, []);
+        handle(EVENT.START.pack([]));
     });
 
 });
